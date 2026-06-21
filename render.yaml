@@ -1,0 +1,30 @@
+services:
+  # FastAPI ASGI Server
+  - type: web
+    name: docustruct-api
+    plan: free
+    runtime: docker
+    dockerfilePath: Dockerfile
+    envVars:
+      # Render automatically links the database below and injects the connection string
+      - key: DATABASE_URL
+        fromDatabase:
+          name: docustruct-db
+          property: connectionString
+      
+      # Placeholders to set in the Render Web Dashboard (secrets & external cluster links)
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+
+# Managed PostgreSQL Database (Free for 90 days)
+databases:
+  - name: docustruct-db
+    databaseName: docustruct
+    user: postgres
+    plan: free
