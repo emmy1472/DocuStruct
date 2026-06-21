@@ -1,0 +1,66 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, development, dev ]
+  pull_request:
+    branches: [ main, development, dev ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: docustruct
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+          - 6334:6334
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install poetry
+        poetry config virtualenvs.create false
+        poetry install --no-interaction --no-ansi
+
+    - name: Lint with Ruff
+      run: |
+        # Stop build if there are Python syntax errors or undefined names
+        poetry run ruff check src/
+
+    - name: Format Check
+      run: |
+        poetry run black --check src/
+
+    - name: Run Test Suite
+      env:
+        DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/docustruct
+        QDRANT_URL: http://localhost:6333
+        GEMINI_API_KEY: mock_key
+      run: |
+        poetry run python test_pipeline.py
