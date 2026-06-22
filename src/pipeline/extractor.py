@@ -58,7 +58,6 @@ class AIExtractor:
                 lambda: self.extraction_model.generate_content(
                     prompt,
                     generation_config=genai.GenerationConfig(
-                        response_mime_type="application/json",
                         response_schema=StructuredDocumentExtraction,
                         temperature=0.1
                     )
