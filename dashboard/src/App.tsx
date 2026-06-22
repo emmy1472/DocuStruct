@@ -4,7 +4,8 @@ import ConfigHeader from './components/ConfigHeader'
 import DocumentIngestionPanel from './components/DocumentIngestionPanel'
 import QueryResultPanel from './components/QueryResultPanel'
 import JsonPanel from './components/JsonPanel'
-import { ApiConfig, checkHealth, getDocument, streamQuery, uploadDocument } from './services/api'
+import type { ApiConfig } from './services/api'
+import { checkHealth, getDocument, streamQuery, uploadDocument } from './services/api'
 
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: 'https://docustruct-f4vg.onrender.com',
@@ -159,7 +160,6 @@ function App() {
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <DocumentIngestionPanel
-            config={config}
             uploadState={uploadState}
             progress={uploadProgress}
             responseJson={documentResponse}

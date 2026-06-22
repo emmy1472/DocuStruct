@@ -1,10 +1,8 @@
 import { useCallback, useMemo } from 'react'
 import { CloudUpload, FileText } from 'lucide-react'
 import JsonPanel from './JsonPanel'
-import type { ApiConfig } from '../services/api'
 
 interface DocumentIngestionPanelProps {
-  config: ApiConfig
   uploadState: 'idle' | 'uploading' | 'queued' | 'processing' | 'validating' | 'complete' | 'error'
   progress: number
   responseJson: unknown
@@ -16,7 +14,6 @@ interface DocumentIngestionPanelProps {
 const mockWorkflow = ['Queued', 'Processing (Extracting Layout)', 'Validating Schema', 'Complete']
 
 export default function DocumentIngestionPanel({
-  config,
   uploadState,
   progress,
   responseJson,

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Code2, LayoutList, Sparkles, Terminal, BookOpen, ArrowRight } from 'lucide-react'
+import { LayoutList, Terminal, BookOpen } from 'lucide-react'
 
 interface CitationItem {
   source: string
