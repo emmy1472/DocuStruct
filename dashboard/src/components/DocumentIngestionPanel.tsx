@@ -85,6 +85,7 @@ export default function DocumentIngestionPanel({
         <p className="mt-4 text-lg font-semibold text-white">Drag & drop a file here</p>
         <p className="mt-2 text-sm text-slate-400">or click to browse your local machine</p>
         <p className="mt-4 text-xs text-slate-500">Supported formats: PDF, Markdown, TXT</p>
+        <p className="mt-2 text-xs text-slate-500">Large PDFs may take longer than 60 seconds to upload; the client timeout is now 120 seconds.</p>
       </div>
 
       <div className="mt-6 grid gap-4">

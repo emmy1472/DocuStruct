@@ -98,8 +98,8 @@ export async function uploadDocument(
     }
 
     xhr.onerror = () => reject(new Error('Network error — could not reach the server.'))
-    xhr.ontimeout = () => reject(new Error('Request timed out.'))
-    xhr.timeout = 60000
+    xhr.ontimeout = () => reject(new Error('Upload timed out after 120 seconds. If the file is large, retry with a smaller document or check the server status.'))
+    xhr.timeout = 120000
     xhr.send(form)
   })
 }
