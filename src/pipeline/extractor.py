@@ -57,7 +57,9 @@ class AIExtractor:
                 None,
                 lambda: self.extraction_model.generate_content(
                     prompt,
-                    temperature=0.1
+                    generation_config=genai.GenerationConfig(
+                        temperature=0.1
+                    )
                 )
             )
             # Parse response back to Pydantic object
