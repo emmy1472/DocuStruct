@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { CloudUpload, FileText } from 'lucide-react'
 import JsonPanel from './JsonPanel'
+import type { DocumentResponse } from '../services/api'
 
 interface DocumentIngestionPanelProps {
   uploadState: 'idle' | 'uploading' | 'queued' | 'processing' | 'validating' | 'complete' | 'error'
@@ -9,6 +10,7 @@ interface DocumentIngestionPanelProps {
   fileName: string
   errorMessage: string
   onSelectFile: (file: File) => void
+  documentsList?: DocumentResponse[]
 }
 
 const mockWorkflow = ['Queued', 'Processing (Extracting Layout)', 'Validating Schema', 'Complete']
@@ -20,6 +22,7 @@ export default function DocumentIngestionPanel({
   fileName,
   errorMessage,
   onSelectFile,
+  documentsList,
 }: DocumentIngestionPanelProps) {
   const statusLabel = useMemo(() => {
     switch (uploadState) {
@@ -120,6 +123,31 @@ export default function DocumentIngestionPanel({
         {errorMessage && (
           <div className="rounded-3xl border border-rose-500 bg-rose-950/20 p-4 text-sm text-rose-200">
             <strong className="text-rose-100">Upload error:</strong> {errorMessage}
+          </div>
+        )}
+
+        {documentsList && documentsList.length > 0 && (
+          <div className="glass-card border-border p-4">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-[0.2em] mb-3">Ingested Documents ({documentsList.length})</h3>
+            <div className="grid gap-2 max-h-48 overflow-y-auto pr-1">
+              {documentsList.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-3 rounded-xl border border-border bg-surface-900 text-xs text-slate-300">
+                  <div className="flex flex-col gap-1 overflow-hidden mr-2">
+                    <span className="font-semibold text-slate-100 truncate">{doc.filename}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">ID: {doc.id}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      doc.status === 'COMPLETED' ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20' :
+                      doc.status === 'FAILED' ? 'bg-rose-950/40 text-rose-400 border border-rose-500/20' :
+                      'bg-amber-950/40 text-amber-400 border border-amber-500/20 animate-pulse'
+                    }`}>
+                      {doc.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

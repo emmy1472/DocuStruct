@@ -4,8 +4,8 @@ import ConfigHeader from './components/ConfigHeader'
 import DocumentIngestionPanel from './components/DocumentIngestionPanel'
 import QueryResultPanel from './components/QueryResultPanel'
 import JsonPanel from './components/JsonPanel'
-import type { ApiConfig } from './services/api'
-import { checkHealth, getDocument, streamQuery, uploadDocument } from './services/api'
+import type { ApiConfig, DocumentResponse } from './services/api'
+import { checkHealth, getDocument, listDocuments, streamQuery, uploadDocument } from './services/api'
 
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: 'https://docustruct-f4vg.onrender.com',
@@ -37,6 +37,8 @@ function App() {
   const [queryError, setQueryError] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [activeQueryTab, setActiveQueryTab] = useState<'reasoning' | 'citations'>('reasoning')
+  const [documentsList, setDocumentsList] = useState<DocumentResponse[]>([])
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string>('')
 
   useEffect(() => {
     let active = true
@@ -56,6 +58,21 @@ function App() {
     }
   }, [config.baseUrl, config.apiKey])
 
+  const fetchDocuments = async () => {
+    try {
+      const list = await listDocuments(config)
+      setDocumentsList(list)
+    } catch (error) {
+      console.error('Failed to fetch documents list:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (isLive) {
+      fetchDocuments()
+    }
+  }, [isLive, config.baseUrl, config.apiKey])
+
   const syncUploadState = async (documentId: string) => {
     try {
       const document = await getDocument(config, documentId)
@@ -64,6 +81,7 @@ function App() {
 
       if (status === 'COMPLETED') {
         setUploadState('complete')
+        fetchDocuments()
         return
       }
 
@@ -122,7 +140,7 @@ function App() {
     setQueryRawResponse(null)
 
     try {
-      const result = await streamQuery(config, queryText, (chunk) => {
+      const result = await streamQuery(config, queryText, selectedDocumentId, (chunk) => {
         setQueryAnswer((current) => current + chunk)
       })
 
@@ -166,6 +184,7 @@ function App() {
             fileName={currentFileName}
             errorMessage={uploadError}
             onSelectFile={handleFileUpload}
+            documentsList={documentsList}
           />
 
           <section className="glass-card border-border p-6">
@@ -183,16 +202,34 @@ function App() {
               </button>
             </div>
 
-            <label className="mt-6 block text-sm text-slate-300">
-              Query prompt
-              <textarea
-                value={queryText}
-                onChange={(event) => setQueryText(event.target.value)}
-                rows={6}
-                placeholder="What are the safety clearance metrics defined in Section 4?"
-                className="input-base mt-2 min-h-[180px] resize-none"
-              />
-            </label>
+            <div className="mt-6 flex flex-col gap-4">
+              <label className="block text-sm text-slate-300">
+                Target Document Context
+                <select
+                  value={selectedDocumentId}
+                  onChange={(event) => setSelectedDocumentId(event.target.value)}
+                  className="input-base mt-2 bg-surface-700 text-slate-200 border-border"
+                >
+                  <option value="">All Uploaded Documents (Global Search)</option>
+                  {documentsList.map((doc) => (
+                    <option key={doc.id} value={doc.id}>
+                      {doc.filename} ({doc.status})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm text-slate-300">
+                Query prompt
+                <textarea
+                  value={queryText}
+                  onChange={(event) => setQueryText(event.target.value)}
+                  rows={6}
+                  placeholder="What are the safety clearance metrics defined in Section 4?"
+                  className="input-base mt-2 min-h-[180px] resize-none"
+                />
+              </label>
+            </div>
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-400">The query endpoint streams results back using SSE for low-latency reasoning.</p>
