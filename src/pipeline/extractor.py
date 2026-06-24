@@ -15,10 +15,10 @@ class AIExtractor:
         # Configure Gemini API client
         genai.configure(api_key=settings.GEMINI_API_KEY)
         self.extraction_model = genai.GenerativeModel(settings.GEMINI_MODEL)
-        self.embedding_model = "models/text-embedding-004"
+        self.embedding_model = "models/gemini-embedding-2"
 
     async def get_embedding(self, text: str) -> List[float]:
-        """Generates semantic text embeddings using Gemini's text-embedding-004 model."""
+        """Generates semantic text embeddings using Gemini's gemini-embedding-2 model."""
         # Wrap the sync call in an executor to avoid blocking the async event loop
         loop = asyncio.get_running_loop()
         try:
@@ -27,7 +27,8 @@ class AIExtractor:
                 lambda: genai.embed_content(
                     model=self.embedding_model,
                     content=text,
-                    task_type="retrieval_document"
+                    task_type="retrieval_document",
+                    output_dimensionality=768
                 )
             )
             return response["embedding"]
@@ -81,7 +82,7 @@ class AIExtractor:
         collection_name = "docustruct_chunks"
         
         # 1. Ensure Qdrant collection exists
-        # 768 is the default dimension size for Gemini's text-embedding-004
+        # 768 is the scaled dimension size for Gemini's gemini-embedding-2
         try:
             collections = await qdrant_client.get_collections()
             exist = any(c.name == collection_name for c in collections.collections)
