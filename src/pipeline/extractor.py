@@ -81,8 +81,7 @@ class AIExtractor:
                 lambda: self.extraction_model.generate_content(
                     prompt,
                     generation_config=genai.GenerationConfig(
-                        temperature=0.1,
-                        response_mime_type="application/json"
+                        temperature=0.1
                     )
                 )
             )
