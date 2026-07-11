@@ -45,7 +45,26 @@ class AIExtractor:
     async def extract_structured_data(self, text: str, page_number: int, section_header: str) -> StructuredDocumentExtraction:
         """Extracts structured entities, relationships, tables, and summary from text."""
         prompt = f"""
-        You are a senior AI data extraction agent. Extract structured information from the following page text:
+        You are a senior AI data extraction agent. Extract structured information from the following page text.
+        You MUST output ONLY valid JSON using the following structure:
+        {{
+            "summary": "A high-level summary of the document chunk",
+            "entities": [
+                {{"name": "...", "type": "...", "description": "..."}}
+            ],
+            "relationships": [
+                {{"source": "...", "target": "...", "type": "...", "description": "..."}}
+            ],
+            "tables": [
+                {{
+                    "title": "...", 
+                    "headers": ["col1", "col2"], 
+                    "rows": [
+                        {{"columns": {{"col1": "val1", "col2": "val2"}}}}
+                    ]
+                }}
+            ]
+        }}
         
         Metadata:
         - Page: {page_number}
@@ -62,12 +81,24 @@ class AIExtractor:
                 lambda: self.extraction_model.generate_content(
                     prompt,
                     generation_config=genai.GenerationConfig(
-                        temperature=0.1
+                        temperature=0.1,
+                        response_mime_type="application/json"
                     )
                 )
             )
+            
+            # Clean up response text in case the model returns markdown backticks
+            raw_text = response.text.strip()
+            if raw_text.startswith("```json"):
+                raw_text = raw_text[7:]
+            elif raw_text.startswith("```"):
+                raw_text = raw_text[3:]
+            if raw_text.endswith("```"):
+                raw_text = raw_text[:-3]
+            raw_text = raw_text.strip()
+            
             # Parse response back to Pydantic object
-            data = json.loads(response.text)
+            data = json.loads(raw_text)
             return StructuredDocumentExtraction(**data)
         except Exception as e:
             # Fallback if API key is not configured or errors occur
