@@ -21,26 +21,35 @@ class AIExtractor:
         """Generates semantic text embeddings using Gemini's gemini-embedding-2 model."""
         # Wrap the sync call in an executor to avoid blocking the async event loop
         loop = asyncio.get_running_loop()
-        try:
-            response = await loop.run_in_executor(
-                None,
-                lambda: genai.embed_content(
-                    model=self.embedding_model,
-                    content=text,
-                    task_type="retrieval_document"
+        max_retries = 4
+        for attempt in range(max_retries):
+            try:
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: genai.embed_content(
+                        model=self.embedding_model,
+                        content=text,
+                        task_type="retrieval_document"
+                    )
                 )
-            )
-            embedding = response["embedding"]
-            # Manually truncate to 768 dimensions if larger, since output_dimensionality kwarg is not supported
-            if len(embedding) > 768:
-                embedding = embedding[:768]
-            return embedding
-        except Exception as e:
-            # Fallback mock embedding if API key is invalid/missing (e.g. for testing)
-            if not settings.GEMINI_API_KEY or "api key" in str(e).lower():
-                # Return standard dimension-768 mock vector
-                return [0.0] * 768
-            raise e
+                embedding = response["embedding"]
+                # Manually truncate to 768 dimensions if larger, since output_dimensionality kwarg is not supported
+                if len(embedding) > 768:
+                    embedding = embedding[:768]
+                return embedding
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "429" in error_msg or "quota" in error_msg:
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(60)
+                        continue
+                # Fallback mock embedding if API key is invalid/missing (e.g. for testing)
+                if not settings.GEMINI_API_KEY or "api key" in error_msg:
+                    # Return standard dimension-768 mock vector
+                    return [0.0] * 768
+                
+                if attempt == max_retries - 1 or ("429" not in error_msg and "quota" not in error_msg):
+                    raise e
 
     async def extract_structured_data(self, text: str, page_number: int, section_header: str) -> StructuredDocumentExtraction:
         """Extracts structured entities, relationships, tables, and summary from text."""
@@ -75,40 +84,50 @@ class AIExtractor:
         """
 
         loop = asyncio.get_running_loop()
-        try:
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.extraction_model.generate_content(
-                    prompt,
-                    generation_config=genai.GenerationConfig(
-                        temperature=0.1
+        max_retries = 4
+        for attempt in range(max_retries):
+            try:
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: self.extraction_model.generate_content(
+                        prompt,
+                        generation_config=genai.GenerationConfig(
+                            temperature=0.1
+                        )
                     )
                 )
-            )
-            
-            # Clean up response text in case the model returns markdown backticks
-            raw_text = response.text.strip()
-            if raw_text.startswith("```json"):
-                raw_text = raw_text[7:]
-            elif raw_text.startswith("```"):
-                raw_text = raw_text[3:]
-            if raw_text.endswith("```"):
-                raw_text = raw_text[:-3]
-            raw_text = raw_text.strip()
-            
-            # Parse response back to Pydantic object
-            data = json.loads(raw_text)
-            return StructuredDocumentExtraction(**data)
-        except Exception as e:
-            # Fallback if API key is not configured or errors occur
-            if not settings.GEMINI_API_KEY or "api key" in str(e).lower():
-                return StructuredDocumentExtraction(
-                    summary="Mock summary (API Key not configured)",
-                    entities=[],
-                    relationships=[],
-                    tables=[]
-                )
-            raise e
+                
+                # Clean up response text in case the model returns markdown backticks
+                raw_text = response.text.strip()
+                if raw_text.startswith("```json"):
+                    raw_text = raw_text[7:]
+                elif raw_text.startswith("```"):
+                    raw_text = raw_text[3:]
+                if raw_text.endswith("```"):
+                    raw_text = raw_text[:-3]
+                raw_text = raw_text.strip()
+                
+                # Parse response back to Pydantic object
+                data = json.loads(raw_text)
+                return StructuredDocumentExtraction(**data)
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "429" in error_msg or "quota" in error_msg:
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(60)
+                        continue
+                
+                # Fallback if API key is not configured or errors occur
+                if not settings.GEMINI_API_KEY or "api key" in error_msg:
+                    return StructuredDocumentExtraction(
+                        summary="Mock summary (API Key not configured)",
+                        entities=[],
+                        relationships=[],
+                        tables=[]
+                    )
+                
+                if attempt == max_retries - 1 or ("429" not in error_msg and "quota" not in error_msg):
+                    raise e
 
     async def process_and_index_document(self, document_id: str, filename: str, chunks: List[Dict[str, Any]]):
         """Processes chunks, generates embeddings, performs AI extraction, and indexes all metadata."""
