@@ -35,6 +35,7 @@ class DocumentModel(Base):
 # 2. Qdrant Client Setup
 qdrant_client = AsyncQdrantClient(
     url=settings.QDRANT_URL,
+    port=443,
     api_key=settings.QDRANT_API_KEY
 )
 
