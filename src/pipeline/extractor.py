@@ -27,11 +27,14 @@ class AIExtractor:
                 lambda: genai.embed_content(
                     model=self.embedding_model,
                     content=text,
-                    task_type="retrieval_document",
-                    output_dimensionality=768
+                    task_type="retrieval_document"
                 )
             )
-            return response["embedding"]
+            embedding = response["embedding"]
+            # Manually truncate to 768 dimensions if larger, since output_dimensionality kwarg is not supported
+            if len(embedding) > 768:
+                embedding = embedding[:768]
+            return embedding
         except Exception as e:
             # Fallback mock embedding if API key is invalid/missing (e.g. for testing)
             if not settings.GEMINI_API_KEY or "api key" in str(e).lower():
